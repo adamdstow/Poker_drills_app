@@ -23,11 +23,11 @@ export class ProgressStore {
     this.runs = [...this.runs.filter((r) => r.id !== run.id), run];
   }
 
-  medals(level: number): MedalStatus {
+  medals(level: string): MedalStatus {
     return medalStatus(level, this.runs);
   }
 
-  stats(level: number): LevelStats {
+  stats(level: string): LevelStats {
     return levelStats(level, this.runs);
   }
 

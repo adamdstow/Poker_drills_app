@@ -28,7 +28,7 @@ export class RunSession {
   ) {
     this.questions = buildRun(level, rng, CONFIG.runLength);
     this.timed = CONFIG.medals[tier].timed;
-    this.timeLimitMs = timeLimitFor(level.id) * 1000;
+    this.timeLimitMs = timeLimitFor(level.key) * 1000;
     this.startedAt = now;
   }
 
@@ -61,7 +61,7 @@ export class RunSession {
   toRecord(id: string, now: number = Date.now()): RunRecord {
     return {
       id,
-      level: this.level.id,
+      level: this.level.key,
       tier: this.tier,
       date: new Date(now).toISOString(),
       score: this.score,

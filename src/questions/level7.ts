@@ -11,6 +11,8 @@ import type { Question } from './types';
 
 const T = CONFIG.tolerance;
 
+const IMPLIED_THINK = 'Implied odds: future winnings needed = call ÷ equity − final pot. With future winnings W, required equity = call ÷ (final pot + W).';
+
 function winningsNeeded(rng: Rng): Question {
   for (;;) {
     const spot = dealDrawSpot(rng, { street: 'turn' });
@@ -24,7 +26,7 @@ function winningsNeeded(rng: Rng): Question {
     return {
       type: 'L7.winningsNeeded',
       typeLabel: 'Implied odds: winnings needed',
-      sourceLevel: 7,
+      sourceLevel: '7',
       prompt: `Turn. The pot is ${bb(pot)} and your opponent bets ${bb(bet)}. You have ${outs} outs ≈ ${e}% equity. How much more must you win on the river when you hit to make calling break even?`,
       cards: { hero: spot.hero, board: spot.board },
       facts: [
@@ -40,6 +42,13 @@ function winningsNeeded(rng: Rng): Question {
         `${bet} ÷ ${e / 100} − ${fp} = ${bb(bet / (e / 100))} − ${fp} = ${bb(value)}.`,
         'If you expect to win at least that much more when you hit, the call breaks even.',
       ],
+      hint: {
+        thinkAbout: IMPLIED_THINK,
+        mistakes: [
+          { value: bet / (e / 100), text: `${bb(bet / (e / 100))} is the total pot you need. Subtract the final pot (${fp}) that is already there.` },
+          { value: bet / (e / 100) - pot, text: `Subtract the final pot (${pot} + ${bet} + ${bet} = ${fp}), not just the starting pot.` },
+        ],
+      },
     };
   }
 }
@@ -52,7 +61,7 @@ function effectiveEquity(rng: Rng): Question {
   return {
     type: 'L7.effectiveEquity',
     typeLabel: 'Implied odds: effective equity',
-    sourceLevel: 7,
+    sourceLevel: '7',
     prompt: `The pot is ${bb(pot)} and your opponent bets ${bb(bet)}. You expect to win ${bb(future)} more on later streets when you hit. What equity do you need to call?`,
     facts: [
       { label: 'Pot', value: bb(pot) },
@@ -67,6 +76,13 @@ function effectiveEquity(rng: Rng): Question {
       `${bet} ÷ (${fp} + ${future}) = ${bet} ÷ ${fp + future} = ${pct(value)}.`,
       `Without implied odds you would need ${pct(requiredEquity(pot, bet, bet) * 100)}.`,
     ],
+    hint: {
+      thinkAbout: IMPLIED_THINK,
+      mistakes: [
+        { value: (bet / fp) * 100, text: `You left out the future winnings. Add them to the final pot: ${fp} + ${future}.` },
+        { value: (bet / (pot + future)) * 100, text: `Use the final pot (${fp}, including the bet and your call) plus the future ${future}.` },
+      ],
+    },
   };
 }
 
@@ -97,7 +113,7 @@ function nutsOrNot(rng: Rng): Question {
     return {
       type: 'L7.reverseImplied',
       typeLabel: 'Reverse implied: nuts or not',
-      sourceLevel: 7,
+      sourceLevel: '7',
       prompt: `You called on the turn with a draw. The river is the ${cardLabel(river)}. Do you now have the nuts?`,
       cards: { hero: spot.hero, board, highlightBoardIndex: board.length - 1 },
       answer: {
@@ -110,6 +126,12 @@ function nutsOrNot(rng: Rng): Question {
       },
       answerText: check.isNuts ? 'Yes — the nuts' : 'No — a better hand is possible',
       explanation,
+      hint: {
+        thinkAbout: 'On the river, look at the board first: is it paired (full houses)? Three of a suit (flushes)? Four to a straight? Then ask what the best possible hand is — do you hold it?',
+        choices: check.isNuts
+          ? { notNuts: 'Nothing beats you here. Check the board: no pair, no three-flush beating you, no higher straight available.' }
+          : { nuts: `${cardsLabel(check.bestOpponent!.cards)} makes a ${categoryName(check.bestOpponent!.score).toLowerCase()} and beats you. Scan the board for pairs, flush cards and higher straights.` },
+      },
     };
   }
 }

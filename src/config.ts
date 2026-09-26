@@ -16,9 +16,14 @@ export const CONFIG = {
     platinum: { minAccuracy: 0.95, timed: true, runsNeeded: 3 },
   } satisfies Record<MedalTier, { minAccuracy: number; timed: boolean; runsNeeded: number }>,
 
-  /** Per-question time limit (seconds) for timed runs, by level. */
+  /** Per-question time limit (seconds) for timed runs, by level key. */
   timeLimitsSec: {
-    0: 8,
+    A1: 8,
+    A2: 6,
+    A3: 8,
+    A4: 8,
+    A5: 12,
+    A6: 15,
     1: 12,
     2: 10,
     3: 10,
@@ -29,7 +34,7 @@ export const CONFIG = {
     8: 15,
     9: 15,
     10: 20,
-  } as Record<number, number>,
+  } as Record<string, number>,
 
   /** Grading tolerances. */
   tolerance: {
@@ -75,6 +80,6 @@ export const CONFIG = {
   turnShare: 0.5,
 } as const;
 
-export function timeLimitFor(level: number): number {
+export function timeLimitFor(level: string): number {
   return CONFIG.timeLimitsSec[level] ?? 15;
 }

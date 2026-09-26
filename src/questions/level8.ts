@@ -36,6 +36,8 @@ export const FIGURES: Record<GtoFigure, { name: string; formula: string; meaning
 
 const ORDER: GtoFigure[] = ['breakEven', 'bluffShare', 'mdf'];
 
+const THINK = 'First decide WHICH figure is asked. Bluffer risking B to win P → break-even fold B ÷ (P + B). Share of your bets that are bluffs → B ÷ (P + 2B). Defender facing a bet → MDF P ÷ (P + B).';
+
 function whichLine(fig: GtoFigure): string {
   const others = ORDER.filter((f) => f !== fig).map((f) => `${FIGURES[f].name} = ${FIGURES[f].formula}`);
   return `This asks for the ${FIGURES[fig].name.toUpperCase()} = ${FIGURES[fig].formula}: ${FIGURES[fig].meaning}. Not to be confused with: ${others.join('; ')}.`;
@@ -91,7 +93,7 @@ function forward(rng: Rng, fig: GtoFigure): Question {
   return {
     type: `L8.${fig}.forward`,
     typeLabel: `${FIGURES[fig].name} (size → %)`,
-    sourceLevel: 8,
+    sourceLevel: '8',
     prompt: forwardPrompt(fig, sizeText),
     facts: inBb ? [{ label: 'Pot', value: bb(pot) }, { label: 'Bet', value: bb(bet) }] : undefined,
     answer: { kind: 'number', value, tolerance: CONFIG.tolerance.percentPoints, unit: '%' },
@@ -101,6 +103,13 @@ function forward(rng: Rng, fig: GtoFigure): Question {
       `${FIGURES[fig].formula} = ${sub} = ${pct(value)}${inBb ? '' : ' (taking the pot as 1)'}.`,
       contrast(P, B),
     ],
+    hint: {
+      thinkAbout: THINK,
+      mistakes: ORDER.filter((f) => f !== fig).map((f) => ({
+        value: FIGURES[f].of(P, B) * 100,
+        text: `That is the ${FIGURES[f].name.toLowerCase()} (${FIGURES[f].formula}). This question asks for the ${FIGURES[fig].name.toLowerCase()}: ${FIGURES[fig].formula}.`,
+      })),
+    },
   };
 }
 
@@ -118,7 +127,7 @@ function reverse(rng: Rng, fig: GtoFigure): Question {
   return {
     type: `L8.${fig}.reverse`,
     typeLabel: `${FIGURES[fig].name} (% → size)`,
-    sourceLevel: 8,
+    sourceLevel: '8',
     prompt: reversePrompt(fig, given),
     answer: { kind: 'number', value, tolerance: CONFIG.tolerance.betPctOfPot, unit: '% of pot' },
     answerText: `${num(value, 0)}% of pot`,
@@ -127,6 +136,16 @@ function reverse(rng: Rng, fig: GtoFigure): Question {
       `${solve[fig]} = ${pct(value)} of the pot (a ${sizeName(fraction)}).`,
       contrast(1, fraction),
     ],
+    hint: {
+      thinkAbout: THINK,
+      mistakes: ORDER.filter((f) => f !== fig)
+        .map((f) => ({
+          value: FIGURES[f].reverse(givenPct / 100) * 100,
+          text: `You solved with the ${FIGURES[f].name.toLowerCase()} formula (${FIGURES[f].formula}). This one is the ${FIGURES[fig].name.toLowerCase()}: ${FIGURES[fig].formula}.`,
+        }))
+        // A bluff share of 50%+ has no bet size, so skip impossible mix-ups.
+        .filter((m) => Number.isFinite(m.value) && m.value > 0),
+    },
   };
 }
 

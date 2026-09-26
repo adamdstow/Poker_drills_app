@@ -5,14 +5,14 @@ import { requiredEquity, ruleOf4And2Pct } from '../../src/engine/formulas';
 import { computeOuts } from '../../src/engine/outs';
 import { createRng } from '../../src/engine/rng';
 import { grade } from '../../src/questions/grade';
-import { buildRun, getLevel, LEVELS, type Question } from '../../src/questions';
+import { buildRun, diagnose, getLevel, LEVELS, type Question } from '../../src/questions';
 import { OVERCARDS_STATEMENT } from '../../src/questions/spots';
 
 const N = 300;
 
-function sample(levelId: number, n = N): Question[] {
-  const rng = createRng(1000 + levelId);
-  return Array.from({ length: n }, () => getLevel(levelId).generate(rng));
+function sample(key: string, n = N): Question[] {
+  const rng = createRng(1000 + key.charCodeAt(0) * 31 + key.length);
+  return Array.from({ length: n }, (_, i) => getLevel(key).generate(rng, { difficulty: i % 4 }));
 }
 
 /** Every question has exactly one gradeable answer. */
@@ -42,6 +42,21 @@ function assertUnambiguous(q: Question) {
     }
   }
   expect(grade(q, { kind: 'timeout' })).toBe(false);
+  // Every question coaches a wrong answer.
+  expect(q.hint.thinkAbout.length).toBeGreaterThan(10);
+  expect(diagnose(q, { kind: 'timeout' }).whatWentWrong.length).toBeGreaterThan(0);
+  if (q.answer.kind === 'choice') {
+    for (const o of q.answer.options) {
+      if (o.id !== q.answer.correct) expect(diagnose(q, { kind: 'choice', id: o.id }).whatWentWrong).not.toMatch(/undefined|NaN/);
+    }
+  } else {
+    const c = diagnose(q, { kind: 'number', raw: String(q.answer.value + q.answer.tolerance + 5) });
+    expect(c.whatWentWrong).not.toMatch(/undefined|NaN|Infinity/);
+  }
+  for (const m of q.hint.mistakes ?? []) {
+    expect(Number.isFinite(m.value)).toBe(true);
+    expect(m.text).not.toMatch(/undefined|NaN|Infinity/);
+  }
   // Opponent's hand is never shown: only hero (2) and board (3–5) cards.
   if (q.cards) {
     expect(q.cards.hero).toHaveLength(2);
@@ -52,24 +67,29 @@ function assertUnambiguous(q: Question) {
   }
 }
 
-describe.each(LEVELS.map((l) => [l.id, l.name] as const))('level %i (%s)', (id) => {
+describe.each(LEVELS.map((l) => [l.key, l.name] as const))('level %s (%s)', (id) => {
   const qs = sample(id);
   it('generates questions with one unambiguous correct answer', () => {
     qs.forEach(assertUnambiguous);
+  });
+  it('has a cheat sheet', () => {
+    const sheet = getLevel(id).cheatSheet;
+    expect(sheet.howTo.length).toBeGreaterThan(1);
+    expect(sheet.examples.length).toBeGreaterThan(0);
   });
   it('builds a 20-question run', () => {
     const run = buildRun(getLevel(id), createRng(7));
     expect(run).toHaveLength(CONFIG.runLength);
   });
   it('is reproducible from a seed', () => {
-    const a = getLevel(id).generate(createRng(99));
-    const b = getLevel(id).generate(createRng(99));
+    const a = getLevel(id).generate(createRng(99), { difficulty: 2 });
+    const b = getLevel(id).generate(createRng(99), { difficulty: 2 });
     expect(a.prompt).toBe(b.prompt);
   });
 });
 
 describe('level 1 outs', () => {
-  const qs = sample(1, 500);
+  const qs = sample('1', 500);
   it('answers equal the engine enumeration and a standard count', () => {
     for (const q of qs) {
       const counted = computeOuts(q.cards!.hero, q.cards!.board, { countOvercards: q.prompt.includes(OVERCARDS_STATEMENT) });
@@ -92,7 +112,7 @@ describe('level 1 outs', () => {
 
 describe('level 2 equity', () => {
   it('grades against the Rule of 4 and 2 ± 1 point', () => {
-    for (const q of sample(2)) {
+    for (const q of sample('2')) {
       const m = /You have (\d+) outs/.exec(q.prompt)!;
       const street = q.prompt.startsWith('Flop') ? 'flop' : 'turn';
       expect(q.answer.kind === 'number' && q.answer.value).toBe(ruleOf4And2Pct(Number(m[1]), street));
@@ -103,7 +123,7 @@ describe('level 2 equity', () => {
 
 describe('level 5 call/fold', () => {
   it('never deals borderline spots and decides by shortcut vs required equity', () => {
-    for (const q of sample(5)) {
+    for (const q of sample('5')) {
       const pot = Number(/pot is ([\d.]+) bb/.exec(q.prompt)![1]);
       const bet = Number(/(?:all-in for|bets) ([\d.]+) bb/.exec(q.prompt)![1]);
       const outs = computeOuts(q.cards!.hero, q.cards!.board, { countOvercards: q.prompt.includes(OVERCARDS_STATEMENT) }).cards.length;
@@ -115,21 +135,21 @@ describe('level 5 call/fold', () => {
     }
   });
   it('produces both calls and folds', () => {
-    const answers = new Set(sample(5).map((q) => (q.answer.kind === 'choice' ? q.answer.correct : '')));
+    const answers = new Set(sample('5').map((q) => (q.answer.kind === 'choice' ? q.answer.correct : '')));
     expect(answers).toEqual(new Set(['call', 'fold']));
   });
 });
 
 describe('level 7 reverse implied odds', () => {
   it('produces both nut and non-nut spots', () => {
-    const rev = sample(7).filter((q) => q.type === 'L7.reverseImplied');
+    const rev = sample('7').filter((q) => q.type === 'L7.reverseImplied');
     const answers = new Set(rev.map((q) => (q.answer.kind === 'choice' ? q.answer.correct : '')));
     expect(answers).toEqual(new Set(['nuts', 'notNuts']));
   });
 });
 
 describe('level 8 GTO', () => {
-  const qs = sample(8);
+  const qs = sample('8');
   it('covers all three figures in both directions', () => {
     const types = new Set(qs.map((q) => q.type));
     for (const f of ['breakEven', 'bluffShare', 'mdf']) {
@@ -146,7 +166,7 @@ describe('level 8 GTO', () => {
   it('uses the corrected bluff share (pot bet → 33%, not 50%)', () => {
     const rng = createRng(3);
     for (let i = 0; i < 400; i++) {
-      const q = getLevel(8).generate(rng);
+      const q = getLevel('8').generate(rng);
       if (q.type === 'L8.bluffShare.forward' && q.prompt.includes('pot-size bet')) {
         expect(q.answer.kind === 'number' && q.answer.value).toBeCloseTo(100 / 3);
         return;
@@ -158,7 +178,7 @@ describe('level 8 GTO', () => {
 
 describe('level 9 range construction', () => {
   it('answers are whole combos', () => {
-    for (const q of sample(9)) {
+    for (const q of sample('9')) {
       expect(q.answer.kind === 'number' && Number.isInteger(Math.round(q.answer.value * 1e9) / 1e9)).toBe(true);
     }
   });
@@ -166,11 +186,11 @@ describe('level 9 range construction', () => {
 
 describe('level 10 mixed', () => {
   it('draws from levels 1–9 and exploit spots', () => {
-    const sources = new Set(sample(10, 600).map((q) => q.sourceLevel));
-    expect([...sources].sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    const sources = new Set(sample('10', 600).map((q) => q.sourceLevel));
+    expect([...sources].sort((a, b) => Number(a) - Number(b))).toEqual(['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']);
   });
   it('exploit spots keep a margin from break-even', () => {
-    for (const q of sample(10, 600).filter((x) => x.type === 'L10.exploit')) {
+    for (const q of sample('10', 600).filter((x) => x.type === 'L10.exploit')) {
       const pot = Number(/pot is ([\d.]+) bb/.exec(q.prompt)![1]);
       const bet = Number(/\(([\d.]+) bb\)/.exec(q.prompt)![1]);
       const fold = Number(/folds (\d+)%/.exec(q.prompt)![1]);
@@ -181,7 +201,7 @@ describe('level 10 mixed', () => {
 
 describe('level 6 bet sizing', () => {
   it('pick-the-size questions always include a size that fails to deny', () => {
-    const picks = sample(6, 600).filter((q) => q.type === 'L6.pickSize');
+    const picks = sample('6', 600).filter((q) => q.type === 'L6.pickSize');
     expect(picks.length).toBeGreaterThan(50);
     for (const q of picks) {
       expect(q.answer.kind === 'choice' && q.answer.correct).not.toBe('0');
@@ -192,8 +212,52 @@ describe('level 6 bet sizing', () => {
 
 describe('level 5 balance', () => {
   it('calls and folds are roughly balanced', () => {
-    const calls = sample(5, 400).filter((q) => q.answer.kind === 'choice' && q.answer.correct === 'call').length;
+    const calls = sample('5', 400).filter((q) => q.answer.kind === 'choice' && q.answer.correct === 'call').length;
     expect(calls).toBeGreaterThan(140);
     expect(calls).toBeLessThan(260);
+  });
+});
+
+describe('arithmetic package', () => {
+  it('runs ramp from easy to hard', () => {
+    const run = buildRun(getLevel('A1'), createRng(11));
+    expect(run.slice(0, 5).every((q) => q.type === 'A1.addBet')).toBe(true);
+    expect(run.slice(15).every((q) => ['A1.finalPotThousands', 'A1.finalPotUneven', 'A1.raise'].includes(q.type))).toBe(true);
+  });
+  it('A1 final pot: forgetting your own call gets a specific hint', () => {
+    const rng = createRng(4);
+    const q = getLevel('A1').generate(rng, { difficulty: 1 });
+    const pot = Number(/pot is ([\d,]+)/.exec(q.prompt)![1]);
+    const bet = Number(/bets ([\d,]+)/.exec(q.prompt)![1]);
+    expect(diagnose(q, { kind: 'number', raw: String(pot + bet) }).whatWentWrong).toMatch(/forgot your own call/);
+  });
+  it('accepts thousands separators', () => {
+    const rng = createRng(8);
+    for (let i = 0; i < 50; i++) {
+      const q = getLevel('A1').generate(rng, { difficulty: 3 });
+      if (q.answer.kind === 'number' && q.answer.value >= 1000) {
+        expect(grade(q, { kind: 'number', raw: q.answer.value.toLocaleString('en-US') })).toBe(true);
+        return;
+      }
+    }
+    throw new Error('no thousands question');
+  });
+});
+
+describe('coaching', () => {
+  it('level 4: dividing by the current pot is called out', () => {
+    for (const q of sample('4', 100).filter((x) => x.type === 'L4.bet')) {
+      const pot = Number(/pot is ([\d.]+) bb/.exec(q.prompt)![1]);
+      const bet = Number(/bets ([\d.]+) bb/.exec(q.prompt)![1]);
+      expect(diagnose(q, { kind: 'number', raw: String((bet / pot) * 100) }).whatWentWrong).toMatch(/final pot/);
+    }
+  });
+  it('level 8: giving another GTO figure names the mix-up', () => {
+    const q = sample('8', 200).find((x) => x.type === 'L8.bluffShare.forward' && x.prompt.includes('pot-size bet'))!;
+    expect(diagnose(q, { kind: 'number', raw: '50' }).whatWentWrong).toMatch(/break-even fold/i);
+  });
+  it('falls back to too high / too low', () => {
+    const q = getLevel('2').generate(createRng(1));
+    expect(diagnose(q, { kind: 'number', raw: '99' }).whatWentWrong).toMatch(/too high/);
   });
 });

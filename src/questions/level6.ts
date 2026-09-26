@@ -16,6 +16,8 @@ const TURN_DRAWS: { name: string; outs: number }[] = [
   { name: 'a flush draw and an open-ender', outs: 15 },
 ];
 
+const THINK = 'Facing bet B into pot P the caller needs B ÷ (P + 2B). A bet denies correct odds when that is more than their equity. Memorise: ⅓ pot → 20%, ½ → 25%, ⅔ → 28.6%, ¾ → 30%, pot → 33%, 2× → 40%.';
+
 function drawIntro(d: { name: string; outs: number }): { text: string; e: number } {
   const e = ruleOf4And2Pct(d.outs, 'turn');
   return { text: `On the turn your opponent has ${d.name}: ${d.outs} outs ≈ ${e}% equity (Rule of 2).`, e };
@@ -39,11 +41,18 @@ function thresholdPct(rng: Rng): Question {
   return {
     type: 'L6.denyPct',
     typeLabel: 'Denial size (% of pot)',
-    sourceLevel: 6,
+    sourceLevel: '6',
     prompt: `${text} Bets above what size (as % of pot) make their call a mistake?`,
     answer: { kind: 'number', value, tolerance: CONFIG.tolerance.betPctOfPot, unit: '% of pot' },
     answerText: `${num(value, 1)}% of pot`,
     explanation: denialSteps(e),
+    hint: {
+      thinkAbout: THINK,
+      mistakes: [
+        { value: e, text: `${e}% is their equity, not the bet size. Solve B ÷ (P + 2B) > ${e}%: bet > e ÷ (1 − 2e) of the pot.` },
+        { value: (e / (100 - e)) * 100, text: 'You used e ÷ (1 − e). The caller\'s call goes in the pot too, so it is e ÷ (1 − 2e).' },
+      ],
+    },
   };
 }
 
@@ -54,12 +63,19 @@ function thresholdBb(rng: Rng): Question {
   return {
     type: 'L6.denyBb',
     typeLabel: 'Denial size (bb)',
-    sourceLevel: 6,
+    sourceLevel: '6',
     prompt: `The pot is ${bb(pot)}. ${text} Bets above how many bb make their call a mistake?`,
     facts: [{ label: 'Pot', value: bb(pot) }],
     answer: { kind: 'number', value, tolerance: Math.max(CONFIG.tolerance.bbAbs, CONFIG.tolerance.bbRel * value), unit: 'bb' },
     answerText: bb(value),
     explanation: denialSteps(e, pot),
+    hint: {
+      thinkAbout: THINK,
+      mistakes: [
+        { value: (e / 100) * pot, text: `That is ${e}% of the pot. The caller also puts money in, so the bet must be e ÷ (1 − 2e) of the pot.` },
+        { value: ((e / 100) / (1 - e / 100)) * pot, text: 'You used e ÷ (1 − e). Use e ÷ (1 − 2e): the call goes in the pot too.' },
+      ],
+    },
   };
 }
 
@@ -85,7 +101,7 @@ function pickSize(rng: Rng): Question {
     return {
       type: 'L6.pickSize',
       typeLabel: 'Pick the denying size',
-      sourceLevel: 6,
+      sourceLevel: '6',
       prompt: `The pot is ${bb(pot)}. ${text} Which is the smallest of these bets that makes their call a mistake?`,
       facts: [{ label: 'Pot', value: bb(pot) }],
       answer: { kind: 'choice', options, correct: String(idx) },
@@ -95,6 +111,17 @@ function pickSize(rng: Rng): Question {
         ...sizes.map((f, i) => `${capitalise(sizeName(f))}: caller needs ${pct(needs[i])} — ${needs[i] > e ? `more than ${e}%, so calling is a mistake` : `${e}% is enough, so calling is fine`}.`),
         `Smallest size that denies: ${sizeName(sizes[idx])}.`,
       ],
+      hint: {
+        thinkAbout: THINK,
+        choices: Object.fromEntries(
+          sizes.map((f, i) => [
+            String(i),
+            i < idx
+              ? `At a ${sizeName(f)} the caller only needs ${pct(needs[i])}, less than their ${e}% — calling is still fine for them.`
+              : `A ${sizeName(f)} does deny them, but a smaller size (${sizeName(sizes[idx])}) already does — pick the smallest.`,
+          ]),
+        ),
+      },
     };
   }
 }

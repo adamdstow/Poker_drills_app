@@ -8,6 +8,8 @@ const T = CONFIG.tolerance;
 const EQUITIES = [50, 40, 33, 30, 25, 20, 17, 16, 14, 12, 11, 10, 9, 8];
 const ODDS = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15, 20];
 
+const THINK = 'Odds against = losses : wins. From equity e: (100 − e) : e. From odds X:1: there are X + 1 outcomes, so equity = 1 ÷ (X + 1).';
+
 export function generateLevel3(rng: Rng): Question {
   if (rng.chance(0.5)) {
     const e = rng.pick(EQUITIES);
@@ -15,7 +17,7 @@ export function generateLevel3(rng: Rng): Question {
     return {
       type: 'L3.toOdds',
       typeLabel: 'Equity → odds',
-      sourceLevel: 3,
+      sourceLevel: '3',
       prompt: `Your equity is ${e}%. What are the odds against, as X:1?`,
       answer: { kind: 'number', value: x, tolerance: Math.max(T.oddsAbs, T.oddsRel * x), unit: ':1' },
       answerText: `${num(x, 1)}:1`,
@@ -24,6 +26,13 @@ export function generateLevel3(rng: Rng): Question {
         `(100 − ${e}) : ${e} = ${100 - e} : ${e}.`,
         `Divide by ${e}: ${num(x, 2)} : 1.`,
       ],
+      hint: {
+        thinkAbout: THINK,
+        mistakes: [
+          { value: 100 / e, text: `100 ÷ ${e} = ${num(100 / e, 1)} counts every outcome, wins included. Subtract the 1 win: ${num(x, 1)}:1.` },
+          { value: e / (100 - e), text: 'That is wins : losses. Odds against is losses : wins — flip it.' },
+        ],
+      },
     };
   }
   const x = rng.pick(ODDS);
@@ -31,7 +40,7 @@ export function generateLevel3(rng: Rng): Question {
   return {
     type: 'L3.toEquity',
     typeLabel: 'Odds → equity',
-    sourceLevel: 3,
+    sourceLevel: '3',
     prompt: `The odds against are ${num(x)}:1. What is the equity %?`,
     answer: { kind: 'number', value: e, tolerance: T.percentPoints, unit: '%' },
     answerText: pct(e),
@@ -39,5 +48,12 @@ export function generateLevel3(rng: Rng): Question {
       `${num(x)}:1 means ${num(x)} losses for every 1 win: ${num(x + 1)} outcomes in total.`,
       `Equity = 1 ÷ (${num(x)} + 1) = ${pct(e)}.`,
     ],
+    hint: {
+      thinkAbout: THINK,
+      mistakes: [
+        { value: 100 / x, text: `You divided by ${num(x)}. Add the win first: 1 ÷ (${num(x)} + 1).` },
+        { value: 100 - e, text: 'That is how often you lose. Equity is how often you win.' },
+      ],
+    },
   };
 }
