@@ -39,6 +39,8 @@ export const CONFIG = {
     arithmeticExact: 0.5,
     /** Arithmetic answers that need rounding (e.g. 1/3 as %). */
     arithmeticRounded: 1,
+    /** Arithmetic answers with an exact decimal result (e.g. 1.5). */
+    arithmeticDecimal: 0.1,
     /** Odds "X:1": accept within max(abs, rel × X). */
     oddsAbs: 0.2,
     oddsRel: 0.06,
