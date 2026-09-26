@@ -14,14 +14,19 @@ export interface CallFoldSpot {
   requiredPct: number;
 }
 
-/** Deal a call/fold spot that is never within the borderline margin. */
+/**
+ * Deal a call/fold spot that is never within the borderline margin. Calls and
+ * folds are equally likely, so "always fold" never scores well.
+ */
 export function dealCallFoldSpot(rng: Rng): CallFoldSpot {
-  for (;;) {
+  const wantCall = rng.chance(0.5);
+  for (let attempt = 0; ; attempt++) {
     const spot = dealDrawSpot(rng);
     const { pot, bet } = dealPotAndBet(rng);
     const equityPct = ruleOf4And2Pct(spot.outs.cards.length, spot.street);
     const requiredPct = requiredEquity(pot, bet, bet) * 100;
     if (Math.abs(equityPct - requiredPct) < CONFIG.borderlineMarginPct) continue;
+    if (equityPct > requiredPct !== wantCall && attempt < 200) continue;
     return { spot, pot, bet, equityPct, requiredPct };
   }
 }

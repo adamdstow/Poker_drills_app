@@ -189,3 +189,11 @@ describe('level 6 bet sizing', () => {
     }
   });
 });
+
+describe('level 5 balance', () => {
+  it('calls and folds are roughly balanced', () => {
+    const calls = sample(5, 400).filter((q) => q.answer.kind === 'choice' && q.answer.correct === 'call').length;
+    expect(calls).toBeGreaterThan(140);
+    expect(calls).toBeLessThan(260);
+  });
+});
