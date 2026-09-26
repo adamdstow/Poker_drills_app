@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseCards } from '../cards';
 import { POSITIONS, gridHand, handClassOf, makePreflopQuestion, parseRange, rangeFor, rangePercent } from '../ranges';
-import { seededRng } from './helpers';
+import { seededRng } from '@/test-helpers';
 
 describe('parseRange', () => {
   it('expands pair ranges', () => {

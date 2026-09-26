@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { DrillId, useStats } from '@/stats/StatsContext';
+import { useStats } from '@/stats/StatsContext';
 import { colors, radius, spacing } from '@/theme';
 
 export interface Choice<A> {
@@ -10,7 +10,7 @@ export interface Choice<A> {
 }
 
 interface Props<A> {
-  drill: DrillId;
+  drill: string;
   /** The table: cards, pot, position. */
   children: ReactNode;
   prompt: string;
@@ -21,15 +21,17 @@ interface Props<A> {
   onNext: () => void;
   /** Shown once the question is answered. */
   explanation: ReactNode;
+  /** The question ran out of time rather than being answered wrong. */
+  timedOut?: boolean;
 }
 
 export function DrillScreen<A extends string | number>({
-  drill, children, prompt, choices, answer, picked, onPick, onNext, explanation,
+  drill, children, prompt, choices, answer, picked, onPick, onNext, explanation, timedOut,
 }: Props<A>) {
-  const { stats } = useStats();
-  const s = stats[drill];
+  const { statsFor } = useStats();
+  const s = statsFor(drill);
   const insets = useSafeAreaInsets();
-  const answered = picked !== null;
+  const answered = picked !== null || !!timedOut;
   const wasRight = picked === answer;
 
   return (
@@ -46,7 +48,7 @@ export function DrillScreen<A extends string | number>({
 
       <View style={styles.table}>{children}</View>
 
-      <Text style={styles.prompt}>{prompt}</Text>
+      {prompt ? <Text style={styles.prompt}>{prompt}</Text> : null}
 
       <View style={styles.choices}>
         {choices.map((c) => {
@@ -75,7 +77,7 @@ export function DrillScreen<A extends string | number>({
       {answered ? (
         <View style={styles.feedback}>
           <Text style={[styles.verdict, { color: wasRight ? colors.correct : colors.wrong }]}>
-            {wasRight ? 'Correct!' : 'Not quite.'}
+            {wasRight ? 'Correct!' : timedOut ? 'Time’s up!' : 'Not quite.'}
           </Text>
           {explanation}
           <Pressable
@@ -83,7 +85,7 @@ export function DrillScreen<A extends string | number>({
             accessibilityRole="button"
             style={({ pressed }) => [styles.next, pressed && { opacity: 0.8 }]}
           >
-            <Text style={styles.nextText}>Next hand →</Text>
+            <Text style={styles.nextText}>Next →</Text>
           </Pressable>
         </View>
       ) : null}

@@ -1,69 +1,109 @@
-import { Card, Rng, deal, pick, remainingDeck, shuffle } from './cards';
-import { HandCategory, compareHands, evaluate } from './evaluator';
+import { Card, Rng, deal, pick, remainingDeck } from './cards';
 
 export type Street = 'flop' | 'turn';
 
-export interface DrawScenario {
+export interface OutsCount {
+  flush: Card[];
+  straight: Card[];
+  /** Cards that pair a Ten-or-better hole card that's above every board card. */
+  overcards: Card[];
+  /** Every distinct out. A card that completes two draws is counted once. */
+  all: Card[];
+  /** How many cards appear in more than one group. */
+  overlap: number;
+}
+
+export interface OutsSpot {
   hole: Card[];
   board: Card[];
   street: Street;
-  outs: Card[];
-  flushOuts: number;
-  straightOuts: number;
-  /** Outs that fill up a set or two pair (full house or quads). */
-  fullHouseOuts: number;
+  outs: OutsCount;
+}
+
+function hasStraight(ranks: Iterable<number>): boolean {
+  const set = new Set(ranks);
+  if (set.has(14)) set.add(1);
+  for (let high = 14; high >= 5; high--) {
+    let run = 0;
+    while (run < 5 && set.has(high - run)) run++;
+    if (run === 5) return true;
+  }
+  return false;
 }
 
 /**
- * Cards that give you a straight or better using at least one hole card.
- * Cards that only improve the board (so everyone plays it) don't count.
+ * Counts outs the way players count them at the table: cards that complete a
+ * flush or straight using a hole card, plus overcard outs. Assumes the hand is
+ * currently unpaired and unmade (see `isDrawSpot`).
  */
-export function findOuts(hole: Card[], board: Card[]): Card[] {
+export function countOuts(hole: Card[], board: Card[]): OutsCount {
   const known = [...hole, ...board];
-  return remainingDeck(known).filter((card) => {
-    const made = evaluate([...known, card]);
-    if (made.category < HandCategory.Straight) return false;
-    const boardOnly = [...board, card];
-    return boardOnly.length < 5 || compareHands(evaluate(boardOnly), made) !== 0;
-  });
+  const boardHigh = Math.max(...board.map((c) => c.rank));
+  const flush: Card[] = [];
+  const straight: Card[] = [];
+  const overcards: Card[] = [];
+
+  for (const card of remainingDeck(known)) {
+    const all = [...known, card];
+    const suited = all.filter((c) => c.suit === card.suit).length;
+    if (suited >= 5 && hole.some((h) => h.suit === card.suit)) flush.push(card);
+    // A straight that's entirely on the board is shared, not an out.
+    if (hasStraight(all.map((c) => c.rank)) && !hasStraight([...board, card].map((c) => c.rank))) {
+      straight.push(card);
+    }
+    if (hole.some((h) => h.rank === card.rank && h.rank > boardHigh && h.rank >= 10)) overcards.push(card);
+  }
+
+  const all = [...new Set([...flush, ...straight, ...overcards])];
+  return { flush, straight, overcards, all, overlap: flush.length + straight.length + overcards.length - all.length };
 }
 
-/** Unseen cards from the player's point of view before the next card. */
-export function unseenCount(street: Street): number {
-  return street === 'flop' ? 47 : 46;
+/** Unpaired, unmade hand with a board that has no pair and at most three of a suit. */
+export function isDrawSpot(hole: Card[], board: Card[]): boolean {
+  const known = [...hole, ...board];
+  if (new Set(known.map((c) => c.rank)).size !== known.length) return false;
+  for (const suit of ['s', 'h', 'd', 'c']) {
+    if (board.filter((c) => c.suit === suit).length > 3) return false;
+    if (known.filter((c) => c.suit === suit).length >= 5) return false;
+  }
+  return !hasStraight(known.map((c) => c.rank));
 }
 
-/**
- * Deals random spots until one has a real draw: the player is currently below
- * a straight and has between `minOuts` and `maxOuts` outs to one.
- */
-export function makeDrawScenario(rng: Rng = Math.random, minOuts = 4, maxOuts = 15): DrawScenario {
-  const street: Street = pick(['flop', 'turn'] as const, rng);
-  const boardSize = street === 'flop' ? 3 : 4;
-  for (;;) {
-    const cards = deal(2 + boardSize, rng);
+type DrawKind = 'flush' | 'openEnded' | 'gutshot' | 'overcards' | 'combo';
+const KINDS: DrawKind[] = ['flush', 'openEnded', 'gutshot', 'overcards', 'combo', 'combo'];
+
+function kindOf(outs: OutsCount): DrawKind | null {
+  const groups = [outs.flush, outs.straight, outs.overcards].filter((g) => g.length > 0).length;
+  if (groups === 0) return null;
+  if (groups > 1) return 'combo';
+  if (outs.flush.length) return 'flush';
+  if (outs.straight.length) return outs.straight.length >= 8 ? 'openEnded' : 'gutshot';
+  return 'overcards';
+}
+
+/** Deals a random drawing hand, aiming for a mix of draw types. */
+export function makeOutsSpot(rng: Rng = Math.random, street?: Street): OutsSpot {
+  const target = pick(KINDS, rng);
+  const s: Street = street ?? pick(['flop', 'turn'] as const, rng);
+  for (let attempt = 0; ; attempt++) {
+    const cards = deal(s === 'flop' ? 5 : 6, rng);
     const hole = cards.slice(0, 2).sort((a, b) => b.rank - a.rank);
     const board = cards.slice(2);
-    if (evaluate([...hole, ...board]).category >= HandCategory.Straight) continue;
-    const outs = findOuts(hole, board);
-    if (outs.length < minOuts || outs.length > maxOuts) continue;
-
-    let flushOuts = 0;
-    let straightOuts = 0;
-    let fullHouseOuts = 0;
-    for (const out of outs) {
-      const category = evaluate([...hole, ...board, out]).category;
-      if (category === HandCategory.Straight) straightOuts++;
-      else if (category === HandCategory.Flush || category === HandCategory.StraightFlush) flushOuts++;
-      else fullHouseOuts++;
-    }
-    return { hole, board, street, outs, flushOuts, straightOuts, fullHouseOuts };
+    if (!isDrawSpot(hole, board)) continue;
+    const outs = countOuts(hole, board);
+    const kind = kindOf(outs);
+    if (!kind || (kind !== target && attempt < 3000)) continue;
+    return { hole, board, street: s, outs };
   }
 }
 
-/** Four distinct multiple-choice answers including the correct one, ascending. */
-export function outsChoices(correct: number, rng: Rng = Math.random): number[] {
-  const candidates = [correct - 4, correct - 3, correct - 1, correct + 1, correct + 2, correct + 3, correct + 4]
-    .filter((n) => n > 0 && n <= 20);
-  return [correct, ...shuffle(candidates, rng).slice(0, 3)].sort((a, b) => a - b);
+/** e.g. "flush draw (9) + gutshot (4)". */
+export function describeDraw(outs: OutsCount): string {
+  const parts: string[] = [];
+  if (outs.flush.length) parts.push(`flush draw (${outs.flush.length})`);
+  const st = outs.straight.length;
+  if (st) parts.push(`${st >= 8 ? 'open-ended straight draw' : st === 4 ? 'gutshot' : 'straight draw'} (${st})`);
+  const ov = outs.overcards.length;
+  if (ov) parts.push(`${ov === 6 ? 'two overcards' : 'one overcard'} (${ov})`);
+  return parts.join(' + ');
 }

@@ -1,4 +1,4 @@
-import { Rng } from '../cards';
+import { Rng } from './poker/cards';
 
 /** Small deterministic PRNG (mulberry32) for repeatable tests. */
 export function seededRng(seed: number): Rng {
