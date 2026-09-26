@@ -41,7 +41,7 @@ export function generateLevel5(rng: Rng): Question {
   return {
     type: 'L5.callFold',
     typeLabel: 'Call or fold',
-    sourceLevel: 5,
+    sourceLevel: '5',
     prompt: `${spot.street === 'flop' ? 'Flop' : 'Turn'}. The pot is ${bb(pot)} and your opponent ${action}. Call or fold?${spot.overcardsStated ? ` ${OVERCARDS_STATEMENT}` : ''}`,
     cards: { hero: spot.hero, board: spot.board },
     facts: [
@@ -63,5 +63,11 @@ export function generateLevel5(rng: Rng): Question {
       `Required equity = ${bet} ÷ (${pot} + ${bet} + ${bet}) = ${bet} ÷ ${fp} = ${pct(requiredPct)}.`,
       `${pct(equityPct)} ${call ? '>' : '<'} ${pct(requiredPct)}, so ${call ? 'call' : 'fold'}.`,
     ],
+    hint: {
+      thinkAbout: 'Run the loop every time: outs → equity (Rule of 4 and 2) → required equity (call ÷ final pot) → call only if your equity is higher.',
+      choices: call
+        ? { fold: `You have ${pct(equityPct)} but only need ${pct(requiredPct)} — folding gives up a profitable call. Check your outs count and the final pot.` }
+        : { call: `You need ${pct(requiredPct)} but only have ${pct(equityPct)}. Did you count too many outs, or forget the bet and your call in the final pot?` },
+    },
   };
 }

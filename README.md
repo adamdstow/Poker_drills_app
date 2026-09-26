@@ -1,6 +1,6 @@
 # Poker Drills
 
-A personal drill app for No-Limit Texas Hold'em maths: 11 levels from arithmetic to GTO range construction, with Silver / Gold / Platinum medals per level. It is an installable, offline-first web app (PWA). [`SPEC.md`](SPEC.md) is the source of truth.
+A personal drill app for No-Limit Texas Hold'em maths: an arithmetic package (A1–A6) and poker levels 1–10 up to GTO range construction, each with a cheat sheet, with Silver / Gold / Platinum medals per level. It is an installable, offline-first web app (PWA). [`SPEC.md`](SPEC.md) is the source of truth.
 
 ## Develop
 

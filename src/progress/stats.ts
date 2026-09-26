@@ -14,7 +14,7 @@ export interface LevelStats {
   mostMissed: MissedType[];
 }
 
-export function levelStats(level: number, runs: readonly RunRecord[], topMissed = 3): LevelStats {
+export function levelStats(level: string, runs: readonly RunRecord[], topMissed = 3): LevelStats {
   const mine = runs.filter((r) => r.level === level);
   let best: RunRecord | null = null;
   for (const r of mine) {
@@ -39,7 +39,7 @@ export function levelStats(level: number, runs: readonly RunRecord[], topMissed 
   };
 }
 
-export function recentRuns(level: number, runs: readonly RunRecord[], n = 5): RunRecord[] {
+export function recentRuns(level: string, runs: readonly RunRecord[], n = 5): RunRecord[] {
   return runs
     .filter((r) => r.level === level)
     .sort((a, b) => b.date.localeCompare(a.date))

@@ -6,7 +6,7 @@ import type { ProgressStore } from '../progress/store';
 import type { RunRecord } from '../progress/types';
 import { clear } from './dom';
 import { renderData } from './screens/data';
-import { renderHome } from './screens/home';
+import { renderArithmetic, renderHome } from './screens/home';
 import { renderLevel } from './screens/level';
 import { renderResults } from './screens/results';
 import { renderRun } from './screens/run';
@@ -14,7 +14,8 @@ import { RunSession } from './session';
 
 export type Screen =
   | { name: 'home' }
-  | { name: 'level'; level: number }
+  | { name: 'arithmetic' }
+  | { name: 'level'; level: string }
   | { name: 'run'; session: RunSession }
   | { name: 'results'; session: RunSession; record: RunRecord; before: MedalStatus }
   | { name: 'data' };
@@ -35,6 +36,11 @@ export class App {
     readonly store: ProgressStore,
   ) {}
 
+  /** Where the back button on a level page goes. */
+  backFromLevel(level: string): Screen {
+    return getLevel(level).group === 'arithmetic' ? { name: 'arithmetic' } : { name: 'home' };
+  }
+
   go(screen: Screen): void {
     this.cleanup?.();
     this.cleanup = undefined;
@@ -47,7 +53,7 @@ export class App {
     r.mounted?.();
   }
 
-  startRun(level: number, tier: MedalTier): void {
+  startRun(level: string, tier: MedalTier): void {
     this.go({ name: 'run', session: new RunSession(getLevel(level), tier, createRng(randomSeed())) });
   }
 
@@ -55,6 +61,8 @@ export class App {
     switch (screen.name) {
       case 'home':
         return renderHome(this);
+      case 'arithmetic':
+        return renderArithmetic(this);
       case 'level':
         return renderLevel(this, screen.level);
       case 'run':

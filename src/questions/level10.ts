@@ -16,7 +16,7 @@ function exploit(rng: Rng): Question {
     return {
       type: 'L10.exploit',
       typeLabel: 'Exploit: is the bluff +EV?',
-      sourceLevel: 10,
+      sourceLevel: '10',
       prompt: `The pot is ${bb(pot)}. Your opponent folds ${foldPct}% of the time to a ${sizeName(fraction)} (${bb(bet)}). Is a pure bluff +EV?`,
       facts: [
         { label: 'Pot', value: bb(pot) },
@@ -36,6 +36,12 @@ function exploit(rng: Rng): Question {
         `EV = fold% × pot − (1 − fold%) × bet = ${num(foldPct / 100, 2)} × ${pot} − ${num(1 - foldPct / 100, 2)} × ${bet} = ${ev < 0 ? '−' : ''}${bb(Math.abs(ev))}.`,
         `Shortcut: break-even fold % = B ÷ (P + B) = ${bet} ÷ ${pot + bet} = ${pct(bePct)}. They fold ${foldPct}%, ${plus ? 'more' : 'less'} than that, so the bluff is ${plus ? '+EV' : '−EV'}.`,
       ],
+      hint: {
+        thinkAbout: 'Compare their fold % with the break-even fold % for your size, B ÷ (P + B). Fold more than that → bluff; less → don\'t.',
+        choices: plus
+          ? { no: `A ${sizeName(fraction)} only needs ${pct(bePct)} folds and they fold ${foldPct}% — the bluff makes money.` }
+          : { yes: `A ${sizeName(fraction)} needs ${pct(bePct)} folds to break even, but they only fold ${foldPct}%.` },
+      },
     };
   }
 }

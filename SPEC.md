@@ -30,7 +30,13 @@ reference and design notes from the design document (Sep 26, 2026).
 - Avoid generating borderline call/fold spots where shortcut equity and required equity are within 2 points.
 
 ## Levels (all unlocked from the start)
-0. **Arithmetic**: fractions, %, ×2/×4, division as used in poker maths.
+0. **Arithmetic package** (v1.1): six levels, each with its own medals. Runs ramp from easy (question 1) to hard (question 20).
+   - **A1 Pot addition**: pot + bet (tens) → pot + bet + call → hundreds and several streets → thousands, uneven numbers and raises.
+   - **A2 Times tables**: outs × 2 / × 4, bet multiples, raise sizing, × 1.5 / 2.5 / 3.5, two-digit × one-digit.
+   - **A3 Division**: ÷ 2 / 5 / 10, ÷ 3 / 4, fractions of the pot (½ ⅓ ¼ ⅔ ¾), ÷ 6 / 8 / 12.
+   - **A4 Fractions ↔ %**: the fraction table, "X% is 1 in ?", % of a number.
+   - **A5 Division to %**: round denominators → simplify to a known fraction → call ÷ final pot → awkward numbers (±1%).
+   - **A6 Multi-step sums**: combo outs, equity ↔ odds, Rule of 4 correction, full pot-odds chain, pot odds after a raise.
 1. **Outs counting**: hand + board shown, enter number of outs.
 2. **Equity from outs**: given outs and street, enter equity %.
 3. **Equity ↔ odds**: convert both directions (e.g. 25% ↔ 3:1).
@@ -49,6 +55,11 @@ reference and design notes from the design document (Sep 26, 2026).
 
 Every question shows a clear step-by-step worked explanation after I answer, right or wrong.
 
+## Cheat sheets and hints (v1.1)
+- Every level (A1–A6 and 1–10) has a cheat sheet: how-to tricks, worked examples and, where useful, a reference table.
+- The cheat sheet is shown on the level page and is available during every run, timed ones included (open by default on iPad, collapsed on iPhone).
+- A wrong answer shows a hint: **what went wrong** (recognising common mistakes, e.g. leaving your own call out of the final pot, or giving the MDF when the break-even fold % was asked) and **what to think about** next time.
+
 ## Medals (per level, earned in order within that level)
 - A run = 20 questions.
 - **Silver**: one run at ≥90% accuracy, untimed.
@@ -59,6 +70,7 @@ Every question shows a clear step-by-step worked explanation after I answer, rig
 
 ## Progress
 - Store every run: level, tier, date, score, time taken, questions missed.
+- Schema v2 (v1.1): level keys are strings ("A1"–"A6", "1"–"10"); v1 data and backups are upgraded automatically.
 - Simple stats per level: best score, attempts, most-missed question types.
 - Export progress to a JSON file and import it back (backup/manual transfer between devices).
 

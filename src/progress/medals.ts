@@ -27,7 +27,7 @@ export function runPasses(run: RunRecord): boolean {
  * Medals for one level, earned in order: a Gold run only counts once Silver
  * is held, and Platinum runs only once Gold is held.
  */
-export function medalStatus(level: number, runs: readonly RunRecord[]): MedalStatus {
+export function medalStatus(level: string, runs: readonly RunRecord[]): MedalStatus {
   const status: MedalStatus = { silver: false, gold: false, platinum: false, platinumRuns: 0 };
   const ordered = runs.filter((r) => r.level === level).sort((a, b) => a.date.localeCompare(b.date));
   for (const r of ordered) {

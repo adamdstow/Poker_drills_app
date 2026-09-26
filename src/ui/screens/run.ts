@@ -1,9 +1,9 @@
 import { TIER_NAMES } from '../../progress/medals';
 import { newRunId } from '../../progress/store';
-import { responseText, type Response } from '../../questions/grade';
+import { diagnose, responseText, type Response } from '../../questions/grade';
 import type { Question } from '../../questions/types';
 import type { App, Rendered } from '../app';
-import { tableEl } from '../components';
+import { cheatSheetPanel, coachEl, tableEl } from '../components';
 import { clear, h } from '../dom';
 import type { AnswerResult, RunSession } from '../session';
 
@@ -22,7 +22,7 @@ export function renderRun(app: App, session: RunSession): Rendered {
   const answerPane = h('section', { class: 'answer-pane' });
 
   const quit = () => {
-    if (session.index === 0 || confirm('Quit this run? It will not be saved.')) app.go({ name: 'level', level: session.level.id });
+    if (session.index === 0 || confirm('Quit this run? It will not be saved.')) app.go({ name: 'level', level: session.level.key });
   };
 
   const el = h(
@@ -32,12 +32,13 @@ export function renderRun(app: App, session: RunSession): Rendered {
       'header',
       { class: 'run-header' },
       h('button', { class: 'btn-ghost', onClick: quit }, '✕ Quit'),
-      h('div', { class: 'run-title' }, `Level ${session.level.id} · ${TIER_NAMES[session.tier]}`),
+      h('div', { class: 'run-title' }, `${session.level.group === 'arithmetic' ? session.level.key : `Level ${session.level.key}`} · ${TIER_NAMES[session.tier]}`),
       h('div', { class: 'run-status' }, scoreEl, counter),
     ),
     h('div', { class: 'progress' }, progressFill),
     timerBar,
     h('div', { class: 'run-layout' }, questionPane, answerPane),
+    cheatSheetPanel(session.level.cheatSheet),
   );
 
   const stopTimer = () => {
@@ -127,6 +128,8 @@ export function renderRun(app: App, session: RunSession): Rendered {
           h('div', null, h('span', { class: 'muted' }, 'Answer: '), h('strong', null, r.question.answerText)),
         ),
       ),
+      ...(r.correct ? [] : [coachEl(diagnose(r.question, r.response))]),
+      h('div', { class: 'explain-title' }, 'Worked answer'),
       h('ol', { class: 'explanation' }, r.question.explanation.map((s) => h('li', null, s))),
       next,
     );
@@ -146,7 +149,7 @@ export function renderRun(app: App, session: RunSession): Rendered {
 
   async function advance() {
     if (session.done) {
-      const before = app.store.medals(session.level.id);
+      const before = app.store.medals(session.level.key);
       const record = session.toRecord(newRunId());
       try {
         await app.store.recordRun(record);

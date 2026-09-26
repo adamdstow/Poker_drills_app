@@ -833,3 +833,185 @@ details summary {
   margin: 6px 0 8px;
   gap: 8px 16px;
 }
+
+/* Home sections and the arithmetic package card */
+.section-title {
+  margin: 20px 0 10px;
+}
+
+.package-card {
+  align-items: center;
+  border-color: var(--accent);
+}
+
+.package-card .level-num {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.chevron {
+  font-size: 32px;
+  color: var(--muted);
+  line-height: 1;
+}
+
+.package-pips {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.pip {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 6px;
+  border-radius: 6px;
+  border: 1px dashed var(--border);
+  color: var(--muted);
+}
+
+.pip-silver {
+  background: var(--silver);
+  color: #111;
+  border: 0;
+}
+
+.pip-gold {
+  background: var(--gold);
+  color: #111;
+  border: 0;
+}
+
+.pip-platinum {
+  background: var(--platinum);
+  color: #111;
+  border: 0;
+}
+
+.level-main {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.level-main .panel,
+.level-layout > .panel {
+  margin-bottom: 0;
+}
+
+h3.first {
+  margin-top: 0;
+}
+
+/* Cheat sheet */
+.cheat-body {
+  display: grid;
+  gap: 16px;
+}
+
+.cheatsheet .cheat-body {
+  margin-top: 12px;
+}
+
+@media (min-width: 820px) {
+  .cheatsheet .cheat-body {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  }
+}
+
+.cheat-col h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--platinum);
+}
+
+.cheat-howto {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.cheat-howto li {
+  margin-bottom: 6px;
+}
+
+.cheat-example {
+  background: var(--surface-2);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+
+.cheat-q {
+  font-weight: 700;
+}
+
+.cheat-steps {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.cheat-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.cheat-table th,
+.cheat-table td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.cheat-table th {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.cheatsheet {
+  margin-top: 16px;
+}
+
+.cheatsheet summary {
+  font-weight: 700;
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--platinum);
+  min-height: 32px;
+}
+
+/* Coaching after a wrong answer */
+.coach {
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  background: rgba(143, 227, 255, 0.08);
+  border: 1px solid rgba(143, 227, 255, 0.4);
+}
+
+.coach p {
+  margin: 0 0 8px;
+}
+
+.coach p:last-child {
+  margin-bottom: 0;
+}
+
+.coach-title,
+.explain-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--platinum);
+  margin-bottom: 4px;
+}
+
+.explain-title {
+  color: var(--muted);
+  margin: 4px 0 8px;
+}

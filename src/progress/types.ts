@@ -1,6 +1,10 @@
 import type { MedalTier } from '../config';
 
-export const SCHEMA_VERSION = 1;
+/**
+ * v1: level was a number 0–10.
+ * v2: level is a string key ("A1"–"A6" for arithmetic, "1"–"10" for poker levels).
+ */
+export const SCHEMA_VERSION = 2;
 
 export interface MissedQuestion {
   type: string;
@@ -12,7 +16,8 @@ export interface MissedQuestion {
 
 export interface RunRecord {
   id: string;
-  level: number;
+  /** Level key, e.g. "A3" or "5". */
+  level: string;
   tier: MedalTier;
   /** ISO timestamp when the run finished. */
   date: string;

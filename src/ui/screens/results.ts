@@ -1,8 +1,9 @@
 import { CONFIG } from '../../config';
 import { highestMedal, nextTier, passMark, runPasses, TIER_NAMES, TIERS, type MedalStatus } from '../../progress/medals';
 import type { RunRecord } from '../../progress/types';
+import { diagnose, getLevel, levelTitle } from '../../questions';
 import type { App, Rendered } from '../app';
-import { medalBadge, medalRow, tableEl } from '../components';
+import { coachEl, medalBadge, medalRow, tableEl } from '../components';
 import { formatDuration, h } from '../dom';
 import type { RunSession } from '../session';
 
@@ -28,7 +29,7 @@ export function renderResults(app: App, session: RunSession, record: RunRecord, 
       newMedal ? medalBadge(newMedal, true) : null,
       h('div', { class: 'big-score' }, `${record.score}`, h('span', { class: 'of' }, `/${record.total}`)),
       h('p', { class: 'verdict' }, verdict),
-      h('p', { class: 'muted' }, `Level ${record.level} · ${TIER_NAMES[record.tier]} · ${formatDuration(record.durationMs)}`),
+      h('p', { class: 'muted' }, `${levelTitle(getLevel(record.level))} · ${TIER_NAMES[record.tier]} · ${formatDuration(record.durationMs)}`),
       medalRow(after),
       h(
         'div',
@@ -57,7 +58,7 @@ export function renderResults(app: App, session: RunSession, record: RunRecord, 
                   r.question.cards ? h('div', { class: 'compact' }, tableEl(r.question.cards)) : null,
                   h('div', null, r.question.prompt),
                   h('div', { class: 'muted' }, `You: ${record.missed[i].given} · Answer: `, h('strong', null, r.question.answerText)),
-                  h('details', null, h('summary', null, 'Explanation'), h('ol', { class: 'explanation' }, r.question.explanation.map((s) => h('li', null, s)))),
+                  h('details', null, h('summary', null, 'Hint and explanation'), coachEl(diagnose(r.question, r.response)), h('ol', { class: 'explanation' }, r.question.explanation.map((s) => h('li', null, s)))),
                 ),
               ),
           ),

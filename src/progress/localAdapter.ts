@@ -30,14 +30,24 @@ export class IndexedDbAdapter implements StorageAdapter {
     if (!this.dbPromise) {
       this.dbPromise = new Promise((resolve, reject) => {
         const req = this.factory.open(this.name, SCHEMA_VERSION);
-        req.onupgradeneeded = () => {
+        req.onupgradeneeded = (event) => {
           const db = req.result;
-          // Future schema versions add migration steps here, keyed on event.oldVersion.
           if (!db.objectStoreNames.contains(RUNS)) {
             const store = db.createObjectStore(RUNS, { keyPath: 'id' });
             store.createIndex('level', 'level');
           }
           if (!db.objectStoreNames.contains(META)) db.createObjectStore(META);
+          // v1 → v2: numeric levels become string keys.
+          if (event.oldVersion >= 1 && event.oldVersion < 2) {
+            const cursorReq = req.transaction!.objectStore(RUNS).openCursor();
+            cursorReq.onsuccess = () => {
+              const cursor = cursorReq.result;
+              if (!cursor) return;
+              const run = cursor.value as { level: unknown };
+              if (typeof run.level === 'number') cursor.update({ ...run, level: String(run.level) });
+              cursor.continue();
+            };
+          }
         };
         req.onsuccess = () => resolve(req.result);
         req.onerror = () => reject(req.error);
